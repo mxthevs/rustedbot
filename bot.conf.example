@@ -1,3 +1,5 @@
 twitch.user=bot_name
 twitch.token=oauth:your_key
 twitch.channel=channel_name
+
+command.prefix=$ # you can remove this line (default: !)

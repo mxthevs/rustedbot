@@ -8,16 +8,36 @@ type Tcp = SecureTCPTransport;
 type Credentials = StaticLoginCredentials;
 
 #[tokio::main]
-pub async fn init(user: Option<String>, token: Option<String>, channel: String) {
+pub async fn init(user: Option<String>, token: Option<String>, channel: String, prefix: String) {
     let config = get_config(user, token);
 
     let (mut messages, client) = TwitchIRCClient::<Tcp, Credentials>::new(config);
+
+    let handler = client.clone();
+    let clonned_channel = channel.clone();
 
     let handle_messages = tokio::spawn(async move {
         while let Some(message) = messages.recv().await {
             match message {
                 ServerMessage::Privmsg(privmsg) => {
-                    println!("{}: {}", privmsg.sender.login, privmsg.message_text);
+                    if privmsg.message_text.starts_with(&prefix) {
+                        let mut args = privmsg
+                            .message_text
+                            .strip_prefix(&prefix)
+                            .unwrap()
+                            .split(' ')
+                            .collect::<Vec<&str>>();
+
+                        let command = args.remove(0);
+
+                        handler
+                            .say(
+                                clonned_channel.to_owned(),
+                                format!("{prefix}{command} is not implemented yet"),
+                            )
+                            .await
+                            .unwrap()
+                    }
                 }
                 ServerMessage::Notice(notice) => {
                     println!("NOTICE: {}", notice.message_text);

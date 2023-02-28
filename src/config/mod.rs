@@ -5,6 +5,7 @@ pub struct Config {
     pub user: Option<String>,
     pub token: Option<String>,
     pub channel: String,
+    pub prefix: String,
 }
 
 impl Config {
@@ -21,6 +22,15 @@ impl Config {
             .into_iter()
             .map(|line| line.trim())
             .filter(|line| !line.is_empty())
+            .map(|line| {
+                if line.contains('#') {
+                    let mut new_line = line.clone();
+                    new_line = &new_line[..new_line.find('#').unwrap()];
+                    new_line
+                } else {
+                    line
+                }
+            })
             .map(|line| {
                 line.split('=')
                     .into_iter()
@@ -44,12 +54,12 @@ impl Config {
                 ["twitch.token", token] => {
                     let mut token = String::from(token);
                     if token.starts_with("oauth:") {
-                        // Remove the oauth: prefix
                         token = String::from(&token[6..]);
                     }
                     config.token = Some(token);
                 }
                 ["twitch.channel", channel] => config.channel = String::from(channel),
+                ["command.prefix", prefix] => config.prefix = String::from(prefix),
                 [unknown, _] => println!("Unknown config option: {unknown}"),
                 _ => (),
             }
@@ -64,5 +74,6 @@ pub fn default() -> Config {
         user: None,
         token: None,
         channel: String::from("commanderroot"),
+        prefix: String::from("!"),
     }
 }

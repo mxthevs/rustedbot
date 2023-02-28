@@ -14,7 +14,7 @@ fn main() -> ExitCode {
     }
 
     let config = Config::from_file(&config_path.unwrap());
-    twitch::irc::init(config.user, config.token, config.channel);
+    twitch::irc::init(config.user, config.token, config.channel, config.prefix);
 
     ExitCode::SUCCESS
 }
