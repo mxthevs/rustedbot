@@ -4,7 +4,7 @@ pub fn migrate() {
     let connection = Connection::open("./database/rusted.db").unwrap();
 
     let create_commands_table_query = "
-      CREATE TABLE commands (
+      CREATE TABLE IF NOT EXISTS commands (
         id INTEGER PRIMARY KEY,
         name TEXT UNIQUE NOT NULL,
         response TEXT NOT NULL,
