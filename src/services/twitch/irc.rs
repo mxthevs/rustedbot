@@ -4,6 +4,8 @@ use twitch_irc::ClientConfig;
 use twitch_irc::SecureTCPTransport;
 use twitch_irc::TwitchIRCClient;
 
+use crate::commands::BuiltinCommand;
+
 type Tcp = SecureTCPTransport;
 type Credentials = StaticLoginCredentials;
 
@@ -29,14 +31,18 @@ pub async fn init(user: Option<String>, token: Option<String>, channel: String, 
                             .collect::<Vec<&str>>();
 
                         let command = args.remove(0);
+                        let command = BuiltinCommand::from_string(command);
 
-                        handler
-                            .say(
-                                clonned_channel.to_owned(),
-                                format!("{prefix}{command} is not implemented yet"),
-                            )
-                            .await
-                            .unwrap()
+                        if let Some(command) = command {
+                            let response = command.execute(args.join(" ").as_str());
+
+                            handler
+                                .say(clonned_channel.to_owned(), response)
+                                .await
+                                .unwrap();
+                        } else {
+                            // TODO: try to parse this as an external command
+                        }
                     }
                 }
                 ServerMessage::Notice(notice) => {
