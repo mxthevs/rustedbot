@@ -5,6 +5,7 @@ use twitch_irc::SecureTCPTransport;
 use twitch_irc::TwitchIRCClient;
 
 use crate::commands::BuiltinCommand;
+use crate::database;
 
 type Tcp = SecureTCPTransport;
 type Credentials = StaticLoginCredentials;
@@ -30,8 +31,8 @@ pub async fn init(user: Option<String>, token: Option<String>, channel: String, 
                             .split(' ')
                             .collect::<Vec<&str>>();
 
-                        let command = args.remove(0);
-                        let command = BuiltinCommand::from_string(command);
+                        let original_cmd = args.remove(0);
+                        let command = BuiltinCommand::from_string(original_cmd);
 
                         if let Some(command) = command {
                             let response = command.execute(args.join(" ").as_str());
@@ -41,7 +42,14 @@ pub async fn init(user: Option<String>, token: Option<String>, channel: String, 
                                 .await
                                 .unwrap();
                         } else {
-                            // TODO: try to parse this as an external command
+                            let response = database::sqlite::get_command_response(original_cmd);
+
+                            if let Ok(response) = response {
+                                handler
+                                    .say(clonned_channel.to_owned(), response)
+                                    .await
+                                    .unwrap();
+                            }
                         }
                     }
                 }

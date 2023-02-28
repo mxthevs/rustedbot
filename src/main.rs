@@ -3,7 +3,7 @@ mod config;
 mod services;
 
 use config::Config;
-use services::twitch;
+use services::{database, twitch};
 use std::process::ExitCode;
 
 fn main() -> ExitCode {
@@ -15,6 +15,8 @@ fn main() -> ExitCode {
     }
 
     let config = Config::from_file(&config_path.unwrap());
+
+    database::sqlite::migrate();
     twitch::irc::init(config.user, config.token, config.channel, config.prefix);
 
     ExitCode::SUCCESS
