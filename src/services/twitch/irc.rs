@@ -4,14 +4,14 @@ use twitch_irc::ClientConfig;
 use twitch_irc::SecureTCPTransport;
 use twitch_irc::TwitchIRCClient;
 
-type TCP = SecureTCPTransport;
+type Tcp = SecureTCPTransport;
 type Credentials = StaticLoginCredentials;
 
 #[tokio::main]
 pub async fn init(user: Option<String>, token: Option<String>, channel: String) {
     let config = get_config(user, token);
 
-    let (mut messages, client) = TwitchIRCClient::<TCP, Credentials>::new(config);
+    let (mut messages, client) = TwitchIRCClient::<Tcp, Credentials>::new(config);
 
     let handle_messages = tokio::spawn(async move {
         while let Some(message) = messages.recv().await {

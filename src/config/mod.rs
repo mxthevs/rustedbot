@@ -17,18 +17,18 @@ impl Config {
         let mut config = default();
 
         let loaded_config = file
-            .split("\n")
+            .split('\n')
             .into_iter()
             .map(|line| line.trim())
-            .filter(|line| line.len() > 0)
+            .filter(|line| !line.is_empty())
             .map(|line| {
-                line.split("=")
+                line.split('=')
                     .into_iter()
                     .map(|part| part.trim())
                     .collect::<Vec<&str>>()
             })
             .map(|line| {
-                if line[1].starts_with("\"") && line[1].ends_with("\"") {
+                if line[1].starts_with('"') && line[1].ends_with('"') {
                     let mut new_line = line.clone();
                     new_line[1] = &line[1][1..line[1].len() - 1];
                     new_line
@@ -50,7 +50,7 @@ impl Config {
                     config.token = Some(token);
                 }
                 ["twitch.channel", channel] => config.channel = String::from(channel),
-                [unknown, _] => println!("Unknown config option: {}", unknown),
+                [unknown, _] => println!("Unknown config option: {unknown}"),
                 _ => (),
             }
         }
