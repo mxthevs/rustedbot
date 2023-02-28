@@ -1,5 +1,6 @@
 mod commands;
 mod config;
+mod helpers;
 mod services;
 
 use config::Config;

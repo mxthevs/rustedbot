@@ -35,7 +35,10 @@ pub async fn init(user: Option<String>, token: Option<String>, channel: String, 
                         let command = BuiltinCommand::from_string(original_cmd);
 
                         if let Some(command) = command {
-                            let response = command.execute(args.join(" ").as_str());
+                            let args = args.join(" ");
+                            let sender = privmsg.sender.login.as_str();
+
+                            let response = command.execute(args.as_str(), sender).await;
 
                             handler
                                 .say(clonned_channel.to_owned(), response)
