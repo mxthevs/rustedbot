@@ -2,3 +2,9 @@
 bot.conf
 database/*
 !database/.gitkeep
+
+node_modules
+npm-debug.log
+yarn-error.log
+yarn-debug.log
+
