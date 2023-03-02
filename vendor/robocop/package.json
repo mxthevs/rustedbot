@@ -1,0 +1,10 @@
+{
+  "name": "robocop",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "esprima": "4.0.1",
+    "esprima-walk": "0.1.0"
+  }
+}
