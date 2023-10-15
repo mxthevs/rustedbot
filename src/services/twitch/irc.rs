@@ -6,6 +6,7 @@ use twitch_irc::TwitchIRCClient;
 
 use crate::commands::BuiltinCommand;
 use crate::database;
+use crate::messages::Message;
 
 type Tcp = SecureTCPTransport;
 type Credentials = StaticLoginCredentials;
@@ -23,7 +24,16 @@ pub async fn init(user: Option<String>, token: Option<String>, channel: String, 
         while let Some(message) = messages.recv().await {
             match message {
                 ServerMessage::Privmsg(privmsg) => {
-                    if privmsg.message_text.starts_with(&prefix) {
+                    let message = Message::make(&privmsg.message_text, &privmsg.sender.login);
+
+                    if message.has_subject() {
+                        let response = message.get_response();
+
+                        handler
+                            .say(clonned_channel.to_owned(), response)
+                            .await
+                            .unwrap();
+                    } else if privmsg.message_text.starts_with(&prefix) {
                         let mut args = privmsg
                             .message_text
                             .strip_prefix(&prefix)
