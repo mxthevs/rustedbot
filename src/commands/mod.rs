@@ -1,12 +1,15 @@
 use crate::database::sqlite;
 use crate::helpers::{has_at_least_one_arg, has_more_than_one_arg};
 
+use std::fs;
+
 pub enum BuiltinCommand {
     Ping,
     AddCmd,
     DelCmd,
     UpdateCmd,
     Wttr,
+    GTASA,
 }
 
 impl BuiltinCommand {
@@ -17,6 +20,7 @@ impl BuiltinCommand {
             "delcmd" => Some(BuiltinCommand::DelCmd),
             "updcmd" => Some(BuiltinCommand::UpdateCmd),
             "clima" => Some(BuiltinCommand::Wttr),
+            "gtasa" => Some(BuiltinCommand::GTASA),
             _ => None,
         }
     }
@@ -64,6 +68,50 @@ impl BuiltinCommand {
                 }
                 false => format!("@{sender} USAGE: clima <local>"),
             },
+            BuiltinCommand::GTASA => {
+                // mission script reference: https://gist.githubusercontent.com/JuniorDjjr/2129e1e7640f7969acdfb1c56c263155/raw/c40592658a69ca84e5a7082abf6dc89ecfd3aecb/fakeMainOutputFile.sc
+                let file = match fs::read_to_string("data/main.scm") {
+                    Ok(file) => file,
+                    Err(_) => return String::from("Error reading file"),
+                };
+
+                let lines = file
+                    .split('\n')
+                    .into_iter()
+                    .map(|line| line.trim())
+                    .filter(|line| !line.is_empty())
+                    .collect::<Vec<&str>>();
+
+                let line = match has_at_least_one_arg(args) {
+                    true => {
+                        let target = args.split(' ').collect::<Vec<&str>>()[0];
+
+                        // get all lines that contain the target
+                        let mut lines_with_target = Vec::new();
+
+                        for l in lines.iter() {
+                            let target = target.to_ascii_lowercase();
+                            if l.to_ascii_lowercase().contains(target.as_str()) {
+                                lines_with_target.push(l);
+                            }
+                        }
+
+                        if lines_with_target.is_empty() {
+                            return format!("");
+                        }
+
+                        let line = rand::random::<usize>() % lines_with_target.len();
+
+                        lines_with_target[line]
+                    }
+                    false => {
+                        let line = rand::random::<usize>() % lines.len();
+                        lines[line]
+                    }
+                };
+
+                format!("{line}")
+            }
         }
     }
 }

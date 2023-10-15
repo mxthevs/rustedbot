@@ -1,4 +1,9 @@
 /target
+
 bot.conf
+
 database/*
 !database/.gitkeep
+
+data/*
+!data/.gitkeep
