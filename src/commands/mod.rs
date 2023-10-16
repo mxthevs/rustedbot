@@ -119,7 +119,6 @@ impl BuiltinCommand {
             }
             BuiltinCommand::Node => match has_at_least_one_arg(args) {
                 true => {
-                    println!("{args}");
                     let command = format!("require('./vendor/robocop/index.js').run(`{args}`)");
                     let output = Command::new("node")
                         .args(["-e", format!("console.log({command})").as_str()])
@@ -132,8 +131,6 @@ impl BuiltinCommand {
                         true => String::from_utf8(output.stdout).unwrap(),
                         false => {
                             let response = String::from_utf8(output.stderr).unwrap();
-                            eprintln!("{response}");
-
                             let error = response.split('\n').collect::<Vec<&str>>()[4];
                             String::from(error)
                         }
