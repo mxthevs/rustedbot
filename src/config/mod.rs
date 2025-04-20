@@ -24,7 +24,7 @@ impl Config {
             .filter(|line| !line.is_empty())
             .map(|line| {
                 if line.contains('#') {
-                    let mut new_line = line.clone();
+                    let mut new_line = line;
                     new_line = &new_line[..new_line.find('#').unwrap()];
                     new_line
                 } else {
