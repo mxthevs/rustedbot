@@ -18,7 +18,7 @@ pub async fn init(user: Option<String>, token: Option<String>, channel: String, 
     let (mut messages, client) = TwitchIRCClient::<Tcp, Credentials>::new(config);
 
     let handler = client.clone();
-    let clonned_channel = channel.clone();
+    let cloned_channel = channel.clone();
 
     let handle_messages = tokio::spawn(async move {
         while let Some(message) = messages.recv().await {
@@ -30,7 +30,7 @@ pub async fn init(user: Option<String>, token: Option<String>, channel: String, 
                         let response = message.get_response();
 
                         handler
-                            .say(clonned_channel.to_owned(), response)
+                            .say(cloned_channel.to_owned(), response)
                             .await
                             .unwrap();
                     } else if privmsg.message_text.starts_with(&prefix) {
@@ -51,7 +51,7 @@ pub async fn init(user: Option<String>, token: Option<String>, channel: String, 
                             let response = command.execute(args.as_str(), sender).await;
 
                             handler
-                                .say(clonned_channel.to_owned(), response)
+                                .say(cloned_channel.to_owned(), response)
                                 .await
                                 .unwrap();
                         } else {
@@ -59,7 +59,7 @@ pub async fn init(user: Option<String>, token: Option<String>, channel: String, 
 
                             if let Ok(response) = response {
                                 handler
-                                    .say(clonned_channel.to_owned(), response)
+                                    .say(cloned_channel.to_owned(), response)
                                     .await
                                     .unwrap();
                             }
