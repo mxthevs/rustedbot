@@ -30,7 +30,7 @@ pub async fn init(user: Option<String>, token: Option<String>, channel: String, 
                         let response = message.get_response();
 
                         handler
-                            .say(cloned_channel.to_owned(), response)
+                            .say(cloned_channel.to_owned(), response.await)
                             .await
                             .unwrap();
                     } else if privmsg.message_text.starts_with(&prefix) {
