@@ -60,7 +60,7 @@ impl Config {
                 }
                 ["twitch.channel", channel] => config.channel = String::from(channel),
                 ["command.prefix", prefix] => config.prefix = String::from(prefix),
-                [unknown, _] => println!("Unknown config option: {unknown}"),
+                [unknown, _] => log::warn!("Unknown config option: {unknown}"),
                 _ => (),
             }
         }

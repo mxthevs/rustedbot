@@ -12,3 +12,6 @@ tokio = { version = "1.25.0", features = [ "rt", "rt-multi-thread" ] }
 twitch-irc = "5.0.0"
 rand = "0.8.5"
 scryfall = "0.20.0"
+log = "0.4.27"
+fern = { version = "0.7.1", features = ["colored"] }
+chrono = "0.4.40"

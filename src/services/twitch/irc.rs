@@ -67,7 +67,16 @@ pub async fn init(user: Option<String>, token: Option<String>, channel: String, 
                     }
                 }
                 ServerMessage::Notice(notice) => {
-                    println!("NOTICE: {}", notice.message_text);
+                    let message = notice.message_text;
+                    log::info!("NOTICE: {message}");
+                }
+                ServerMessage::Join(join) => {
+                    let (user, channel) = (join.user_login, join.channel_login);
+                    log::info!("{user} joined the channel {channel}");
+                }
+                ServerMessage::Part(part) => {
+                    let (user, channel) = (part.user_login, part.channel_login);
+                    log::info!("{user} left the channel {channel}");
                 }
                 _ => (),
             }

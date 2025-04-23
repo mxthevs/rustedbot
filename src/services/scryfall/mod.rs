@@ -54,8 +54,15 @@ pub async fn get_card(card: String) -> Option<String> {
             }
         }
         Err(e) => {
-            println!("Error: {}", e);
-            None
+            log::error!("Error fetching card \"{card}\": {e}");
+
+            match e {
+                scryfall::Error::ScryfallError(e) => {
+                    let details = e.details;
+                    Some(format!("Scryfall error: {details}"))
+                }
+                _ => None,
+            }
         }
     }
 }
