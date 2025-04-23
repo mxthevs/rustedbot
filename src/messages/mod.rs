@@ -69,7 +69,7 @@ impl Message {
                 let response = scryfall::get_card(card.to_string()).await;
 
                 if let Some(response) = response {
-                    return format!("{}", response);
+                    return format!("{response}");
                 }
 
                 return format!("@{0} Não consegui encontrar o card.", self.sender);
