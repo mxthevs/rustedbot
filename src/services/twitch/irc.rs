@@ -27,10 +27,15 @@ pub async fn init(user: Option<String>, token: Option<String>, channel: String, 
                     let message = Message::make(&privmsg.message_text, &privmsg.sender.login);
 
                     if message.has_subject() {
-                        let response = message.get_response();
+                        let sender = privmsg.sender.login.as_str();
+                        let subject = message.subject.clone().unwrap();
+                        let content = message.content.clone();
+
+                        let response = message.get_response().await;
+                        log::debug!("@{sender} triggered the subject \"{subject}\" with message: \"{content}\". Response: {response}");
 
                         handler
-                            .say(cloned_channel.to_owned(), response.await)
+                            .say(cloned_channel.to_owned(), response)
                             .await
                             .unwrap();
                     } else if privmsg.message_text.starts_with(&prefix) {
@@ -49,19 +54,28 @@ pub async fn init(user: Option<String>, token: Option<String>, channel: String, 
                             let sender = privmsg.sender.login.as_str();
 
                             let response = command.execute(args.as_str(), sender).await;
+                            log::debug!("@{sender} triggered builtin command \"{original_cmd}\" with args: \"{args}\". Response: {response}");
 
                             handler
                                 .say(cloned_channel.to_owned(), response)
                                 .await
                                 .unwrap();
                         } else {
+                            let sender = privmsg.sender.login.as_str();
                             let response = database::sqlite::get_command_response(original_cmd);
 
-                            if let Ok(response) = response {
-                                handler
-                                    .say(cloned_channel.to_owned(), response)
-                                    .await
-                                    .unwrap();
+                            match response {
+                                Ok(response) => {
+                                    log::debug!("@{sender} triggered custom command \"{original_cmd}\". Response: {response}");
+                                    handler
+                                        .say(cloned_channel.to_owned(), response)
+                                        .await
+                                        .unwrap();
+                                }
+                                Err(e) => {
+                                    log::debug!("@{sender} triggered custom command \"{original_cmd}\". There was an error.");
+                                    log::error!("Error fetching command \"{original_cmd}\": {e}");
+                                }
                             }
                         }
                     }

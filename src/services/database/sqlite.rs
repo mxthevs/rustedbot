@@ -30,7 +30,7 @@ pub fn create_command(name: &str, response: &str) {
         .unwrap();
 }
 
-pub fn get_command_response(name: &str) -> Result<String, ()> {
+pub fn get_command_response(name: &str) -> Result<String, rusqlite::Error> {
     let connection = Connection::open("./database/rusted.db").unwrap();
 
     let get_command_response_query = "
@@ -49,10 +49,10 @@ pub fn get_command_response(name: &str) -> Result<String, ()> {
                 return Ok(response.unwrap());
             }
         }
-        _ => return Err(()),
+        Err(e) => return Err(e),
     }
 
-    Err(())
+    Err(rusqlite::Error::QueryReturnedNoRows)
 }
 
 pub fn update_command_response(name: &str, response: &str) {
