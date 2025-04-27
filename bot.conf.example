@@ -3,3 +3,4 @@ twitch.token=oauth:your_key
 twitch.channel=channel_name
 
 command.prefix=$ # you can remove this line (default: !)
+command.trusted=user1,user2 # users with access to all commands (default: empty)

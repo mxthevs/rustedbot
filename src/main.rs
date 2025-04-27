@@ -22,7 +22,7 @@ fn main() -> ExitCode {
 
     let config = Config::from_file(&config_path.unwrap());
 
-    database::sqlite::migrate();
+    database::sqlite::migrate(config.trusted_users.clone());
     twitch::irc::init(config.user, config.token, config.channel, config.prefix);
 
     ExitCode::SUCCESS

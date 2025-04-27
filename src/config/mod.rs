@@ -6,6 +6,7 @@ pub struct Config {
     pub token: Option<String>,
     pub channel: String,
     pub prefix: String,
+    pub trusted_users: Vec<String>,
 }
 
 impl Config {
@@ -60,6 +61,15 @@ impl Config {
                 }
                 ["twitch.channel", channel] => config.channel = String::from(channel),
                 ["command.prefix", prefix] => config.prefix = String::from(prefix),
+                ["command.trusted", trusted_users] => {
+                    let trusted_users: Vec<String> = trusted_users
+                        .split(',')
+                        .into_iter()
+                        .map(|user| user.trim())
+                        .map(|user| String::from(user))
+                        .collect();
+                    config.trusted_users = trusted_users;
+                }
                 [unknown, _] => log::warn!("Unknown config option: {unknown}"),
                 _ => (),
             }
@@ -75,5 +85,6 @@ pub fn default() -> Config {
         token: None,
         channel: String::from("commanderroot"),
         prefix: String::from("!"),
+        trusted_users: vec![],
     }
 }

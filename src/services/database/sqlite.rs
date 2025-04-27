@@ -1,6 +1,7 @@
+use rusqlite::params_from_iter;
 use rusqlite::Connection;
 
-pub fn migrate() {
+pub fn migrate(trusted_users: Vec<String>) {
     let connection = Connection::open("./database/rusted.db").unwrap();
 
     let create_commands_table_query = "
@@ -15,6 +16,44 @@ pub fn migrate() {
     ";
 
     connection.execute(create_commands_table_query, []).unwrap();
+
+    let create_trusted_users_table_query = "
+      CREATE TABLE IF NOT EXISTS trusted_users (
+        id INTEGER PRIMARY KEY,
+        username TEXT UNIQUE NOT NULL,
+        created_at DATETIME NOT NULL,
+        updated_at DATETIME NOT NULL,
+        deleted_at DATETIME
+      )
+    ";
+
+    connection
+        .execute(create_trusted_users_table_query, [])
+        .unwrap();
+
+    if trusted_users.is_empty() {
+        return ();
+    }
+
+    let values = (1..=trusted_users.len())
+        .map(|i| format!("(?{i}, datetime('now'), datetime('now'))"))
+        .collect::<Vec<_>>()
+        .join(", ");
+
+    let insert_trusted_users_query = format!(
+        "
+          INSERT INTO trusted_users (username, created_at, updated_at)
+          VALUES {values}
+          ON CONFLICT(username) DO NOTHING
+          "
+    );
+
+    connection
+        .execute(
+            &insert_trusted_users_query,
+            params_from_iter(trusted_users.iter().map(|user| user.as_str())),
+        )
+        .unwrap();
 }
 
 pub fn create_command(name: &str, response: &str) {
@@ -79,4 +118,22 @@ pub fn delete_command(name: &str) {
     ";
 
     connection.execute(delete_command_query, &[&name]).unwrap();
+}
+
+pub fn is_trusted(username: &str) -> bool {
+    let connection = Connection::open("./database/rusted.db").unwrap();
+
+    let is_trusted_query = "
+      SELECT 1
+      FROM trusted_users
+      WHERE username = ?
+      AND deleted_at IS NULL
+      LIMIT 1
+    ";
+
+    let result = connection.query_row(is_trusted_query, rusqlite::params![username], |row| {
+        row.get::<usize, i32>(0)
+    });
+
+    result.is_ok()
 }

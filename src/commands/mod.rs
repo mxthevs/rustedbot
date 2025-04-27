@@ -16,6 +16,20 @@ pub enum BuiltinCommand {
     Node,
 }
 
+impl std::fmt::Display for BuiltinCommand {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BuiltinCommand::Ping => write!(f, "ping"),
+            BuiltinCommand::AddCmd => write!(f, "addcmd"),
+            BuiltinCommand::DelCmd => write!(f, "delcmd"),
+            BuiltinCommand::UpdateCmd => write!(f, "updcmd"),
+            BuiltinCommand::Wttr => write!(f, "clima"),
+            BuiltinCommand::GTASA => write!(f, "gtasa"),
+            BuiltinCommand::Node => write!(f, "node"),
+        }
+    }
+}
+
 impl BuiltinCommand {
     pub fn from_string(command: &str) -> Option<BuiltinCommand> {
         match command {
@@ -30,9 +44,24 @@ impl BuiltinCommand {
         }
     }
 
+    pub fn requires_trust(&self) -> bool {
+        matches!(
+            self,
+            BuiltinCommand::AddCmd
+                | BuiltinCommand::DelCmd
+                | BuiltinCommand::UpdateCmd
+                | BuiltinCommand::Node
+        )
+    }
+
     // args is a string with all the content after the command
     // each command can parse it as it wants
     pub async fn execute(&self, args: &str, sender: &str) -> String {
+        if self.requires_trust() && !sqlite::is_trusted(sender) {
+            log::warn!("User {sender} tried to run the \"{self}\" command without permission. Consider adding them to the trusted users list.");
+            return format!("@{sender} you are not authorized to run this command.");
+        }
+
         match self {
             BuiltinCommand::Ping => String::from("Pong!"),
             BuiltinCommand::AddCmd => match has_more_than_one_arg(args) {
