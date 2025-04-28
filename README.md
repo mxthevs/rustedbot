@@ -12,16 +12,18 @@ rustedbot is a Twitch.tv chatbot 🤗. It can be used to moderate your chat, int
 
 1. Clone the repository
 2. Rename the `bot.conf.example` file to `bot.conf` and fill in the values
-3. Build the bot with `cargo build --release`
+3. Rename the `.env.example` file to `.env` and fill in the values
+3. Build the bot with `make build`
 4. Run the bot with `./target/release/rustedbot ./bot.conf`
 
 ```bash
 git clone https://github.com/mxthevs/rustedbot.git
 cd rustedbot
 cargo build --release
-cp bot.conf.example bot.conf
-# Fill in the values
-./target/release/rustedbot ./bot.conf
+cp bot.conf.example bot.conf # Fill in the values
+cp .env.example .env # Fill in the values
+make build
+make run
 ```
 
 ## Contributing

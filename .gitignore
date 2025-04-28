@@ -1,5 +1,6 @@
 /target
 
+.env
 bot.conf
 
 database/*
@@ -8,7 +9,8 @@ database/*
 data/*
 !data/.gitkeep
 
-/vendor
+vendor/*
+!vendor/.gitkeep
 
 node_modules
 npm-debug.log

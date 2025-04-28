@@ -1,0 +1,9 @@
+FROM node:23-alpine
+
+RUN addgroup -S sandboxgroup && adduser -S sandboxuser -G sandboxgroup
+
+USER sandboxuser
+
+WORKDIR /sandbox
+
+CMD ["sleep", "1s"]

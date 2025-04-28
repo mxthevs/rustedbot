@@ -1,10 +1,10 @@
+use std::fs;
 use std::process::Command;
 use std::process::Stdio;
+use uuid::Uuid;
 
 use crate::database::sqlite;
 use crate::helpers::{has_at_least_one_arg, has_more_than_one_arg};
-
-use std::fs;
 
 pub enum BuiltinCommand {
     Ping,
@@ -54,8 +54,6 @@ impl BuiltinCommand {
         )
     }
 
-    // args is a string with all the content after the command
-    // each command can parse it as it wants
     pub async fn execute(&self, args: &str, sender: &str) -> String {
         if self.requires_trust() && !sqlite::is_trusted(sender) {
             log::warn!("User {sender} tried to run the \"{self}\" command without permission. Consider adding them to the trusted users list.");
@@ -103,7 +101,6 @@ impl BuiltinCommand {
                 false => format!("@{sender} USAGE: clima <local>"),
             },
             BuiltinCommand::GTASA => {
-                // mission script reference: https://gist.githubusercontent.com/JuniorDjjr/2129e1e7640f7969acdfb1c56c263155/raw/c40592658a69ca84e5a7082abf6dc89ecfd3aecb/fakeMainOutputFile.sc
                 let file = match fs::read_to_string("data/main.scm") {
                     Ok(file) => file,
                     Err(_) => return String::from("Error reading file"),
@@ -120,7 +117,6 @@ impl BuiltinCommand {
                     true => {
                         let target = args.split(' ').collect::<Vec<&str>>()[0];
 
-                        // get all lines that contain the target
                         let mut lines_with_target = Vec::new();
 
                         for l in lines.iter() {
@@ -148,24 +144,81 @@ impl BuiltinCommand {
             }
             BuiltinCommand::Node => match has_at_least_one_arg(args) {
                 true => {
-                    let command = format!("require('./vendor/robocop/index.js').run(`{args}`)");
-                    let output = Command::new("node")
-                        .args(["-e", format!("console.log({command})").as_str()])
+                    let robocop_path = "vendor/robocop/bin";
+
+                    if let Err(_) = fs::metadata(robocop_path) {
+                        log::error!("Robocop not found. Please run `make build` to install it.");
+                        return String::from("Security measures not found. Not continuing.");
+                    }
+
+                    let robocop_output = Command::new(robocop_path)
+                        .arg(args)
                         .stdout(Stdio::piped())
                         .stderr(Stdio::piped())
                         .output()
                         .unwrap();
 
-                    let response = match output.status.success() {
-                        true => String::from_utf8(output.stdout).unwrap(),
-                        false => {
-                            let response = String::from_utf8(output.stderr).unwrap();
-                            let error = response.split('\n').collect::<Vec<&str>>()[4];
-                            String::from(error)
-                        }
-                    };
+                    if !robocop_output.status.success() {
+                        let response = String::from_utf8_lossy(&robocop_output.stderr);
+                        log::error!("Robocop error: {response}");
 
-                    response
+                        let error_line = response.lines().nth(4).unwrap_or("Unknown error");
+                        return String::from(error_line);
+                    }
+
+                    let uid = Uuid::new_v4();
+                    let filename = format!("/tmp/{uid}.js");
+                    let content = format!("console.log((() => ({args}))());");
+                    fs::write(&filename, content).expect("Unable to write temporary JS file.");
+
+                    let file = &filename;
+                    let container_output = Command::new("docker")
+                        .args([
+                            "run",
+                            "--rm",
+                            "--memory",
+                            "128m",
+                            "--cpus",
+                            "0.5",
+                            "--network",
+                            "none",
+                            "--read-only",
+                            "--pids-limit",
+                            "64",
+                            "-v",
+                            format!("{file}:/sandbox/script.js:ro").as_str(),
+                            "node-sandbox",
+                            "node",
+                            "/sandbox/script.js",
+                        ])
+                        .stdout(Stdio::piped())
+                        .stderr(Stdio::piped())
+                        .output();
+
+                    fs::remove_file(file).ok();
+
+                    match container_output {
+                        Ok(output) => {
+                            if output.status.success() {
+                                String::from_utf8_lossy(&output.stdout).to_string()
+                            } else {
+                                let error_message = String::from_utf8_lossy(&output.stderr);
+                                log::error!("Error while running JavaScript code: {error_message}");
+
+                                let error_line = error_message
+                                    .lines()
+                                    .nth(4)
+                                    .unwrap_or("Unknown error")
+                                    .to_string();
+
+                                error_line
+                            }
+                        }
+                        Err(e) => {
+                            log::error!("Error running Docker container: {e}");
+                            String::from("There was an error while trying to run the code.")
+                        }
+                    }
                 }
                 false => format!("@{sender} USAGE: node <code>"),
             },
