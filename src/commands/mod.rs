@@ -11,6 +11,8 @@ pub enum BuiltinCommand {
     AddCmd,
     DelCmd,
     UpdateCmd,
+    Trust,
+    Untrust,
     Wttr,
     GTASA,
     Node,
@@ -23,6 +25,8 @@ impl std::fmt::Display for BuiltinCommand {
             BuiltinCommand::AddCmd => write!(f, "addcmd"),
             BuiltinCommand::DelCmd => write!(f, "delcmd"),
             BuiltinCommand::UpdateCmd => write!(f, "updcmd"),
+            BuiltinCommand::Trust => write!(f, "trust"),
+            BuiltinCommand::Untrust => write!(f, "untrust"),
             BuiltinCommand::Wttr => write!(f, "clima"),
             BuiltinCommand::GTASA => write!(f, "gtasa"),
             BuiltinCommand::Node => write!(f, "node"),
@@ -37,6 +41,8 @@ impl BuiltinCommand {
             "addcmd" => Some(BuiltinCommand::AddCmd),
             "delcmd" => Some(BuiltinCommand::DelCmd),
             "updcmd" => Some(BuiltinCommand::UpdateCmd),
+            "trust" => Some(BuiltinCommand::Trust),
+            "untrust" => Some(BuiltinCommand::Untrust),
             "clima" => Some(BuiltinCommand::Wttr),
             "gtasa" => Some(BuiltinCommand::GTASA),
             "node" => Some(BuiltinCommand::Node),
@@ -50,6 +56,8 @@ impl BuiltinCommand {
             BuiltinCommand::AddCmd
                 | BuiltinCommand::DelCmd
                 | BuiltinCommand::UpdateCmd
+                | BuiltinCommand::Trust
+                | BuiltinCommand::Untrust
                 | BuiltinCommand::Node
         )
     }
@@ -89,6 +97,22 @@ impl BuiltinCommand {
                     String::from("Command updated!")
                 }
                 false => format!("@{sender} USAGE: updcmd <name> <response>"),
+            },
+            BuiltinCommand::Trust => match has_at_least_one_arg(args) {
+                true => {
+                    let name = args.split(' ').collect::<Vec<&str>>()[0];
+                    sqlite::trust_user(name);
+                    format!("{name} is now trusted.")
+                }
+                false => format!("@{sender} USAGE: trust <name>"),
+            },
+            BuiltinCommand::Untrust => match has_at_least_one_arg(args) {
+                true => {
+                    let name = args.split(' ').collect::<Vec<&str>>()[0];
+                    sqlite::untrust_user(name);
+                    format!("{name} is now untrusted.")
+                }
+                false => format!("@{sender} USAGE: untrust <name>"),
             },
             BuiltinCommand::Wttr => match has_at_least_one_arg(args) {
                 true => {

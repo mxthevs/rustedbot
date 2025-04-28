@@ -137,3 +137,33 @@ pub fn is_trusted(username: &str) -> bool {
 
     result.is_ok()
 }
+
+pub fn trust_user(username: &str) {
+    let connection = Connection::open("./database/rusted.db").unwrap();
+
+    if is_trusted(username) {
+        return ();
+    }
+
+    let trust_user_query = "
+      INSERT INTO trusted_users (username, created_at, updated_at)
+      VALUES (?, datetime('now'), datetime('now'))
+      ON CONFLICT(username) DO NOTHING
+    ";
+
+    connection.execute(trust_user_query, &[&username]).unwrap();
+}
+
+pub fn untrust_user(username: &str) {
+    let connection = Connection::open("./database/rusted.db").unwrap();
+
+    let untrust_user_query = "
+      UPDATE trusted_users
+      SET deleted_at = datetime('now')
+      WHERE username = ?
+    ";
+
+    connection
+        .execute(untrust_user_query, &[&username])
+        .unwrap();
+}
