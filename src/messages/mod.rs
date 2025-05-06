@@ -7,10 +7,23 @@ pub enum Subject {
 }
 
 impl Subject {
-    pub fn from_string(message: &str) -> Option<Subject> {
+    pub const fn priority(&self) -> f32 {
+        match self {
+            Subject::OCaml => 0.5,
+            Subject::Magic(_) => 1.,
+        }
+    }
+
+    fn detect_ocaml(message: &str) -> Option<Subject> {
         if message.to_ascii_lowercase().contains("ocaml") {
             Some(Subject::OCaml)
-        } else if message.contains("[[") && message.contains("]]") {
+        } else {
+            None
+        }
+    }
+
+    fn detect_magic(message: &str) -> Option<Subject> {
+        if message.contains("[[") && message.contains("]]") {
             let start = message.find("[[").unwrap();
             let end = message.find("]]").unwrap();
 
@@ -23,6 +36,23 @@ impl Subject {
         } else {
             None
         }
+    }
+
+    pub fn from_string(message: &str) -> Option<Subject> {
+        let mut detected: Vec<Subject> = vec![];
+
+        if let Some(subject) = Self::detect_ocaml(message) {
+            detected.push(subject);
+        }
+
+        if let Some(subject) = Self::detect_magic(message) {
+            detected.push(subject);
+        }
+
+        detected
+            .into_iter()
+            .max_by(|a, b| a.priority().partial_cmp(&b.priority()).unwrap())
+            .map(|s| s)
     }
 }
 
@@ -61,17 +91,14 @@ impl Message {
     pub async fn get_response(&self) -> String {
         match &self.subject {
             Some(Subject::OCaml) => {
-                let words = self.content.split(' ').collect::<Vec<&str>>();
-                let ocaml_index = words
-                    .iter()
-                    .position(|&word| word.to_ascii_lowercase() == "ocaml");
+                let ocaml = self
+                    .content
+                    .split_whitespace()
+                    .find(|word| word.eq_ignore_ascii_case("ocaml"))
+                    .expect("OCaml word not found, but subject was detected");
 
-                if let Some(index) = ocaml_index {
-                    let ocaml = words[index..].join(" ");
-
-                    if ocaml != "OCaml" {
-                        return format!("@{0} Não é {ocaml}, é OCaml.", self.sender);
-                    }
+                if ocaml != "OCaml" {
+                    return format!("@{0} Não é {ocaml}, é OCaml.", self.sender);
                 }
             }
             Some(Subject::Magic(card)) => {
