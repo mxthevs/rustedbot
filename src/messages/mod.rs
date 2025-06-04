@@ -1,15 +1,26 @@
 use crate::services::scryfall;
+use chrono::{Local, Timelike};
+use rand::{seq::SliceRandom, Rng};
+
+enum TimeOfDay {
+    Morning,
+    Afternoon,
+    Evening,
+    Night,
+}
 
 #[derive(Debug, Clone)]
 pub enum Subject {
     OCaml,
     Magic(String),
+    Greetings,
 }
 
 impl Subject {
     pub const fn priority(&self) -> f32 {
         match self {
             Subject::OCaml => 0.5,
+            Subject::Greetings => 0.7,
             Subject::Magic(_) => 1.,
         }
     }
@@ -38,6 +49,27 @@ impl Subject {
         }
     }
 
+    fn detect_greetings(message: &str) -> Option<Subject> {
+        const REQUIRED_WORDS: [&str; 2] = ["bot", "caml_bot"];
+        let greetings = vec!["oi", "olá", "eae", "e ai", "salve"];
+
+        let message = message.to_ascii_lowercase();
+        let words: Vec<&str> = message
+            .split(|c: char| !c.is_alphanumeric() && c != '_') // Keeps underscores in names like "caml_bot"
+            .filter(|w| !w.is_empty())
+            .collect();
+
+        for greeting in greetings.iter() {
+            if words.contains(greeting) {
+                if REQUIRED_WORDS.iter().any(|word| words.contains(word)) {
+                    return Some(Subject::Greetings);
+                }
+            }
+        }
+
+        None
+    }
+
     pub fn from_string(message: &str) -> Option<Subject> {
         let mut detected: Vec<Subject> = vec![];
 
@@ -46,6 +78,10 @@ impl Subject {
         }
 
         if let Some(subject) = Self::detect_magic(message) {
+            detected.push(subject);
+        }
+
+        if let Some(subject) = Self::detect_greetings(message) {
             detected.push(subject);
         }
 
@@ -61,6 +97,7 @@ impl std::fmt::Display for Subject {
         match self {
             Subject::OCaml => write!(f, "OCaml"),
             Subject::Magic(card) => write!(f, "Magic({card})"),
+            Subject::Greetings => write!(f, "Greetings"),
         }
     }
 }
@@ -110,9 +147,68 @@ impl Message {
 
                 return format!("@{0} Não consegui encontrar o card.", self.sender);
             }
+            Some(Subject::Greetings) => {
+                let time_of_day = get_time_of_day();
+                let mut rng = rand::thread_rng();
+
+                let generic = vec![
+                    "oi @{{sender}}",
+                    "eae @{{sender}}",
+                    "e ai @{{sender}}, beleza?",
+                    "Como uma IA de linguagem, não tenho a capacidade de sentir emoções, mas estou aqui para ajudar com suas perguntas e tarefas. Como posso ajudar você hoje?",
+                ];
+
+                let specific = match time_of_day {
+                    TimeOfDay::Morning => vec![
+                        "bom dia @{{sender}}",
+                        "bom diaa @{{sender}}!",
+                        "bom dia! o sol já nasceu na fazendinha @{{sender}}!",
+                        "bom dia! dormiu bem @{{sender}}?",
+                    ],
+                    TimeOfDay::Afternoon => vec![
+                        "boa tarde @{{sender}}",
+                        "opa, boa tarde @{{sender}}!",
+                        "boa tarde! como vai @{{sender}}?",
+                        "boa tarde! tudo tranquilo @{{sender}}?",
+                    ],
+                    TimeOfDay::Evening => vec![
+                        "boa noite @{{sender}}",
+                        "e aí, boa noite @{{sender}}",
+                        "boa noite! como foi seu dia @{{sender}}?",
+                        "noite! como foi seu dia @{{sender}}?",
+                    ],
+                    TimeOfDay::Night => vec![
+                        "vai dormir não, @{{sender}}?",
+                        "noite longa, hein @{{sender}}?",
+                        "ainda acordado @{{sender}}?",
+                        "essas horas @{{sender}}?",
+                    ],
+                };
+
+                let response_pool = if rng.gen_bool(0.4) {
+                    &generic
+                } else {
+                    &specific
+                };
+
+                return response_pool
+                    .choose(&mut rng)
+                    .unwrap_or(&"olá @{{sender}}")
+                    .replace("{{sender}}", &self.sender);
+            }
             None => {}
         }
 
         String::from("")
+    }
+}
+
+fn get_time_of_day() -> TimeOfDay {
+    let hour = Local::now().hour();
+    match hour {
+        5..=11 => TimeOfDay::Morning,
+        12..=17 => TimeOfDay::Afternoon,
+        18..=22 => TimeOfDay::Evening,
+        _ => TimeOfDay::Night,
     }
 }
