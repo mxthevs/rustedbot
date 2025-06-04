@@ -16,3 +16,4 @@ log = "0.4.27"
 fern = { version = "0.7.1", features = ["colored"] }
 chrono = "0.4.40"
 uuid = { version = "1.16.0", features = ["v4"] }
+statrs = "0.18.0"

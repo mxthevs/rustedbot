@@ -2,9 +2,10 @@ use std::fs;
 use std::process::Command;
 use std::process::Stdio;
 use uuid::Uuid;
+use statrs::distribution::{Hypergeometric, DiscreteCDF};
 
 use crate::database::sqlite;
-use crate::helpers::{has_at_least_one_arg, has_more_than_one_arg};
+use crate::helpers::{has_at_least_one_arg, has_more_than_one_arg, has_at_least_four_args};
 
 pub enum BuiltinCommand {
     Ping,
@@ -16,6 +17,7 @@ pub enum BuiltinCommand {
     Wttr,
     GTASA,
     Node,
+    Odds,
 }
 
 impl std::fmt::Display for BuiltinCommand {
@@ -30,6 +32,7 @@ impl std::fmt::Display for BuiltinCommand {
             BuiltinCommand::Wttr => write!(f, "clima"),
             BuiltinCommand::GTASA => write!(f, "gtasa"),
             BuiltinCommand::Node => write!(f, "node"),
+            BuiltinCommand::Odds => write!(f, "odds"),
         }
     }
 }
@@ -46,6 +49,7 @@ impl BuiltinCommand {
             "clima" => Some(BuiltinCommand::Wttr),
             "gtasa" => Some(BuiltinCommand::GTASA),
             "node" => Some(BuiltinCommand::Node),
+            "odds" => Some(BuiltinCommand::Odds),
             _ => None,
         }
     }
@@ -246,6 +250,39 @@ impl BuiltinCommand {
                 }
                 false => format!("@{sender} USAGE: node <code>"),
             },
+            BuiltinCommand::Odds => match has_at_least_four_args(args) {
+                true => {
+                    let parts: Vec<&str> = args.split_whitespace().collect();
+                    let deck_size = parts[0].parse::<u64>();
+                    let num_successes = parts[1].parse::<u64>();
+                    let num_draws = parts[2].parse::<u64>();
+                    let min_successes = parts[3].parse::<u64>();
+            
+                    match (deck_size, num_successes, num_draws, min_successes) {
+                        (Ok(deck_size), Ok(num_successes), Ok(num_draws), Ok(min_successes)) => {
+                            if num_successes > deck_size || num_draws > deck_size {
+                                return format!("Error: More successes or draws than cards in deck.");
+                            }
+            
+                            let hyper = Hypergeometric::new(num_successes, deck_size - num_successes, num_draws);
+                            if let Ok(h) = hyper {
+                                let prob = 1.0 - h.cdf(min_successes - 1);
+                                let percentage = prob * 100.0;
+                                
+                                format!("Odds of drawing {min_successes} or more of {num_successes} cards from {num_draws} draws in a {deck_size} card deck: {percentage:.5}%")
+                            } else {
+                                log::error!("Error creating hypergeometric distribution: {args}");
+                                format!("Error creating hypergeometric distribution.")
+                            }
+                        }
+                        _ => {
+                            log::error!("Invalid parameters for hypergeometric calculation: {args}");
+                            format!("USAGE: !odds <Deck Size> <Number of Successes> <Number of Draws> <Successes Needed>")
+                        },
+                    }
+                }
+                false => format!("USAGE: !odds <Deck Size> <Number of Successes> <Number of Draws> <Successes Needed>"),
+            }
         }
     }
 }
