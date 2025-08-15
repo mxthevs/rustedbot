@@ -1,13 +1,18 @@
+use regex::Regex;
+use statrs::distribution::{DiscreteCDF, Hypergeometric};
 use std::fs;
 use std::process::Command;
 use std::process::Stdio;
+use strum::IntoEnumIterator;
+use strum_macros::EnumIter;
 use uuid::Uuid;
-use statrs::distribution::{Hypergeometric, DiscreteCDF};
 
 use crate::database::sqlite;
-use crate::helpers::{has_at_least_one_arg, has_more_than_one_arg, has_at_least_four_args};
+use crate::helpers::{has_at_least_four_args, has_at_least_one_arg, has_more_than_one_arg};
 
+#[derive(EnumIter)]
 pub enum BuiltinCommand {
+    Commands,
     Ping,
     AddCmd,
     DelCmd,
@@ -23,6 +28,7 @@ pub enum BuiltinCommand {
 impl std::fmt::Display for BuiltinCommand {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            BuiltinCommand::Commands => write!(f, "commands"),
             BuiltinCommand::Ping => write!(f, "ping"),
             BuiltinCommand::AddCmd => write!(f, "addcmd"),
             BuiltinCommand::DelCmd => write!(f, "delcmd"),
@@ -40,6 +46,7 @@ impl std::fmt::Display for BuiltinCommand {
 impl BuiltinCommand {
     pub fn from_string(command: &str) -> Option<BuiltinCommand> {
         match command {
+            "commands" => Some(BuiltinCommand::Commands),
             "ping" => Some(BuiltinCommand::Ping),
             "addcmd" => Some(BuiltinCommand::AddCmd),
             "delcmd" => Some(BuiltinCommand::DelCmd),
@@ -74,12 +81,67 @@ impl BuiltinCommand {
 
         match self {
             BuiltinCommand::Ping => String::from("Pong!"),
+            BuiltinCommand::Commands => {
+                let commands_in_db = sqlite::get_commands();
+
+                if let Err(e) = commands_in_db {
+                    log::error!("Failed to retrieve commands: {e}");
+                    return format!("Error retrieving commands.");
+                }
+
+                let commands_in_db = commands_in_db.unwrap()
+                .iter()
+                .map(|(name, _)| format!("{name}"))
+                .collect::<Vec<_>>()
+                .join(", ");
+
+                let builtin_commands: BuiltinCommandIter = BuiltinCommand::iter();
+                let mut commands = String::new();
+
+                for command in builtin_commands {
+                    commands.push_str(&format!("{command}, "));
+                }
+
+                let mut commands = commands.trim().to_string();
+
+                while commands.ends_with(",") {
+                    commands.pop();
+                }
+
+                let all_commands = if commands_in_db.len() > 0 {
+                    format!("{commands}, {commands_in_db}")
+                } else {
+                    commands
+                };
+
+                String::from(all_commands)
+            },
             BuiltinCommand::AddCmd => match has_more_than_one_arg(args) {
                 true => {
-                    let name = args.split(' ').collect::<Vec<&str>>()[0];
-                    let response = args.split(' ').collect::<Vec<&str>>()[1..].join(" ");
+                    let mut parts = args.splitn(2, ' ');
+                    let name = parts.next().unwrap_or("");
+                    let response = parts.next().unwrap_or("").trim();
 
-                    sqlite::create_command(name, response.as_str());
+                    let re = Regex::new(r"^[a-zA-Z0-9]+$").unwrap();
+                    if !re.is_match(name) {
+                        log::error!("{sender} tried to add an invalid command name: {name}");
+                        return String::from("Command name can only contain letters and numbers.");
+                    }
+
+                    let existing_command = BuiltinCommand::iter().find(|cmd| format!("{cmd}") == name);
+                    if existing_command.is_some() {
+                        log::error!("{sender} tried to add a command that already exists as a built-in command: {name}");
+                        return String::from("The command you are trying to add already exists as a built-in command.");
+                    }
+
+                    let command_in_db = sqlite::get_command_response(name);
+                    if command_in_db.is_ok() {
+                       sqlite::update_command_response(name, response);
+                       log::info!("{sender} tried to add a command that already exists: {name}. It was updated with {response}");
+                       return String::from("Command already exists. It was updated with the new response.");
+                    }
+
+                    sqlite::create_command(name, response);
                     String::from("Command added!")
                 }
                 false => format!("@{sender} USAGE: addcmd <name> <response>"),
@@ -257,18 +319,18 @@ impl BuiltinCommand {
                     let num_successes = parts[1].parse::<u64>();
                     let num_draws = parts[2].parse::<u64>();
                     let min_successes = parts[3].parse::<u64>();
-            
+
                     match (deck_size, num_successes, num_draws, min_successes) {
                         (Ok(deck_size), Ok(num_successes), Ok(num_draws), Ok(min_successes)) => {
                             if num_successes > deck_size || num_draws > deck_size {
                                 return format!("Error: More successes or draws than cards in deck.");
                             }
-            
+
                             let hyper = Hypergeometric::new(num_successes, deck_size - num_successes, num_draws);
                             if let Ok(h) = hyper {
                                 let prob = 1.0 - h.cdf(min_successes - 1);
                                 let percentage = prob * 100.0;
-                                
+
                                 format!("Odds of drawing {min_successes} or more of {num_successes} cards from {num_draws} draws in a {deck_size} card deck: {percentage:.5}%")
                             } else {
                                 log::error!("Error creating hypergeometric distribution: {args}");
@@ -277,11 +339,11 @@ impl BuiltinCommand {
                         }
                         _ => {
                             log::error!("Invalid parameters for hypergeometric calculation: {args}");
-                            format!("USAGE: !odds <Deck Size> <Number of Successes> <Number of Draws> <Successes Needed>")
+                            format!("USAGE: odds <Deck Size> <Number of Successes> <Number of Draws> <Successes Needed>")
                         },
                     }
                 }
-                false => format!("USAGE: !odds <Deck Size> <Number of Successes> <Number of Draws> <Successes Needed>"),
+                false => format!("USAGE: odds <Deck Size> <Number of Successes> <Number of Draws> <Successes Needed>"),
             }
         }
     }

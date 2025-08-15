@@ -69,6 +69,26 @@ pub fn create_command(name: &str, response: &str) {
         .unwrap();
 }
 
+pub fn get_commands() -> Result<Vec<(String, String)>, rusqlite::Error> {
+    let connection = Connection::open("./database/rusted.db").unwrap();
+
+    let get_commands_query = "
+      SELECT name, response
+      FROM commands
+      WHERE deleted_at IS NULL
+    ";
+
+    let mut statement = connection.prepare(get_commands_query).unwrap();
+    let commands = statement.query_map([], |row| Ok((row.get(0).unwrap(), row.get(1).unwrap())))?;
+
+    let mut result = Vec::new();
+    for command in commands {
+        result.push(command?);
+    }
+
+    Ok(result)
+}
+
 pub fn get_command_response(name: &str) -> Result<String, rusqlite::Error> {
     let connection = Connection::open("./database/rusted.db").unwrap();
 

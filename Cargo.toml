@@ -17,3 +17,6 @@ fern = { version = "0.7.1", features = ["colored"] }
 chrono = "0.4.40"
 uuid = { version = "1.16.0", features = ["v4"] }
 statrs = "0.18.0"
+strum = "0.25"
+strum_macros = "0.25"
+regex = "1.11.1"
