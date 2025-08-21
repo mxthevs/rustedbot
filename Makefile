@@ -37,4 +37,15 @@ build: check-vendor build-vendor
 	cargo build
 
 run: build
+	@if ! docker system info > /dev/null 2>&1; then \
+		echo "Docker is not running. Starting Docker Desktop..."; \
+		open -a Docker; \
+		while ! docker system info > /dev/null 2>&1; do \
+			echo "Waiting for Docker to start..."; \
+			sleep 1; \
+		done; \
+		echo "Docker is now running."; \
+	else \
+		echo "Docker is already running."; \
+	fi
 	cargo run bot.conf

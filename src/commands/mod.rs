@@ -5,7 +5,7 @@ use std::process::Command;
 use std::process::Stdio;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
-use uuid::Uuid;
+use tempfile::NamedTempFile;
 
 use crate::database::sqlite;
 use crate::helpers::{has_at_least_four_args, has_at_least_one_arg, has_more_than_one_arg};
@@ -241,6 +241,20 @@ impl BuiltinCommand {
                         return String::from("Security measures not found. Not continuing.");
                     }
 
+                    let docker_system_info = Command::new("docker")
+                        .arg("system")
+                        .arg("info")
+                        .stdout(std::process::Stdio::null())
+                        .stderr(std::process::Stdio::null())
+                        .status();
+
+                    let is_docker_running = matches!(docker_system_info, Ok(s) if s.success());
+
+                    if !is_docker_running {
+                        log::error!("User {sender} tried to run the node command but Docker is not running.");
+                        return String::from("Docker is not running. Not continuing.");
+                    }
+
                     let robocop_output = Command::new(robocop_path)
                         .arg(args)
                         .stdout(Stdio::piped())
@@ -249,43 +263,34 @@ impl BuiltinCommand {
                         .unwrap();
 
                     if !robocop_output.status.success() {
-                        let response = String::from_utf8_lossy(&robocop_output.stderr);
-                        log::error!("Robocop error: {response}");
+                        const KNOWN_ROBOCOP_EXCEPTIONS: [&str; 2] = ["InfiniteLoopError", "ForbiddenModuleError"];
 
+                        let response = String::from_utf8_lossy(&robocop_output.stderr);
                         let error_line = response.lines().nth(4).unwrap_or("Unknown error");
+
+                        if let Some(exception) = KNOWN_ROBOCOP_EXCEPTIONS.iter().find(|e| error_line.starts_with(*e)) {
+                            log::warn!("User {sender} triggered the {exception} security measure with `{args}`");
+                        } else {
+                            log::error!("User {sender} triggered a Robocop exception: {response} with `{args}`");
+                        }
+
                         return String::from(error_line);
                     }
 
-                    let uid = Uuid::new_v4();
-                    let filename = format!("/tmp/{uid}.js");
+                    let file = NamedTempFile::new().expect("Unable to create temporary JS file.");
                     let content = format!("console.log((() => ({args}))());");
-                    fs::write(&filename, content).expect("Unable to write temporary JS file.");
+                    fs::write(file.path(), content).expect("Unable to write temporary JS file.");
 
-                    let file = &filename;
                     let container_output = Command::new("docker")
                         .args([
-                            "run",
-                            "--rm",
-                            "--memory",
-                            "128m",
-                            "--cpus",
-                            "0.5",
-                            "--network",
-                            "none",
-                            "--read-only",
-                            "--pids-limit",
-                            "64",
-                            "-v",
-                            format!("{file}:/sandbox/script.js:ro").as_str(),
-                            "node-sandbox",
-                            "node",
-                            "/sandbox/script.js",
+                            "run", "--rm", "--memory", "128m", "--cpus", "0.5",
+                            "--network", "none", "--read-only", "--pids-limit", "64",
+                            "-v", &format!("{}:/sandbox/script.js:ro", file.path().display()),
+                            "node-sandbox", "node", "/sandbox/script.js",
                         ])
                         .stdout(Stdio::piped())
                         .stderr(Stdio::piped())
                         .output();
-
-                    fs::remove_file(file).ok();
 
                     match container_output {
                         Ok(output) => {
