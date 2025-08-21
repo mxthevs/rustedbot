@@ -4,8 +4,9 @@ use twitch_irc::ClientConfig;
 use twitch_irc::SecureTCPTransport;
 use twitch_irc::TwitchIRCClient;
 
-use crate::commands::BuiltinCommand;
+use crate::commands::registry::Registry;
 use crate::database;
+use crate::database::sqlite;
 use crate::messages::Message;
 
 type Tcp = SecureTCPTransport;
@@ -47,19 +48,33 @@ pub async fn init(user: Option<String>, token: Option<String>, channel: String, 
                             .collect::<Vec<&str>>();
 
                         let original_cmd = args.remove(0);
-                        let command = BuiltinCommand::from_string(original_cmd);
+                        let command = Registry::get(original_cmd);
 
                         if let Some(command) = command {
                             let args = args.join(" ");
                             let sender = privmsg.sender.login.as_str();
 
-                            let response = command.execute(args.as_str(), sender).await;
-                            log::debug!("@{sender} triggered builtin command \"{original_cmd}\" with args: \"{args}\". Response: {response}");
+                            if command.requires_trust() && !sqlite::is_trusted(sender) {
+                                log::warn!("User {sender} tried to run the \"{}\" command without permission. Consider adding them to the trusted users list.", command.name());
 
-                            handler
-                                .say(cloned_channel.to_owned(), response)
-                                .await
-                                .unwrap();
+                                handler
+                                    .say(
+                                        cloned_channel.to_owned(),
+                                        format!(
+                                            "@{sender} you are not authorized to run this command."
+                                        ),
+                                    )
+                                    .await
+                                    .unwrap();
+                            } else {
+                                let response = command.execute(args.as_str(), sender).await;
+                                log::debug!("@{sender} triggered builtin command \"{original_cmd}\" with args: \"{args}\". Response: {response}");
+
+                                handler
+                                    .say(cloned_channel.to_owned(), response)
+                                    .await
+                                    .unwrap();
+                            }
                         } else {
                             let sender = privmsg.sender.login.as_str();
                             let response = database::sqlite::get_command_response(original_cmd);
