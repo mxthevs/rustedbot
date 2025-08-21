@@ -1,5 +1,5 @@
 use super::Command;
-use crate::helpers::has_at_least_one_arg;
+use crate::helpers::has_at_least_n_args;
 use crate::register_command;
 
 use anyhow::{Context, Result};
@@ -35,7 +35,7 @@ impl Command for Node {
 }
 
 async fn run_node(args: &str, sender: &str) -> Result<String> {
-    if !has_at_least_one_arg(args) {
+    if !has_at_least_n_args(args, 1) {
         anyhow::bail!("USAGE: node <code>");
     }
 

@@ -1,5 +1,5 @@
 use super::Command;
-use crate::helpers::has_at_least_one_arg;
+use crate::helpers::has_at_least_n_args;
 use crate::register_command;
 
 use async_trait::async_trait;
@@ -21,7 +21,7 @@ impl Command for Gta {
             Err(_) => return String::from("Error reading file"),
         };
 
-        let target = if has_at_least_one_arg(args) {
+        let target = if has_at_least_n_args(args, 1) {
             Some(args.split_whitespace().next().unwrap())
         } else {
             None

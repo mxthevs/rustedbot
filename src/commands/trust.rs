@@ -1,6 +1,6 @@
 use super::Command;
 use crate::database::sqlite;
-use crate::helpers::has_more_than_one_arg;
+use crate::helpers::has_at_least_n_args;
 use crate::register_command;
 
 use regex::Regex;
@@ -29,7 +29,7 @@ impl Command for Trust {
 }
 
 fn parse_args<'a>(args: &'a str, sender: &str) -> Result<&'a str, String> {
-    if !has_more_than_one_arg(args) {
+    if !has_at_least_n_args(args, 1) {
         return Err(format!("@{sender} USAGE: trust <username>"));
     }
 

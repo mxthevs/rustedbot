@@ -1,5 +1,5 @@
 use super::Command;
-use crate::helpers::has_at_least_four_args;
+use crate::helpers::has_at_least_n_args;
 use crate::register_command;
 
 use async_trait::async_trait;
@@ -34,7 +34,7 @@ fn parse_odds_args(args: &str) -> Result<OddsParams, String> {
         "USAGE: odds <Deck Size> <Number of Successes> <Number of Draws> <Successes Needed>",
     );
 
-    if !has_at_least_four_args(args) {
+    if !has_at_least_n_args(args, 4) {
         return Err(usage);
     }
 
