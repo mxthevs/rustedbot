@@ -51,7 +51,7 @@ impl Subject {
 
     fn detect_greetings(message: &str) -> Option<Subject> {
         const REQUIRED_WORDS: [&str; 2] = ["bot", "caml_bot"];
-        let greetings = vec!["oi", "olá", "eae", "e ai", "salve"];
+        let greetings = ["oi", "olá", "eae", "e ai", "salve"];
 
         let message = message.to_ascii_lowercase();
         let words: Vec<&str> = message
@@ -60,10 +60,8 @@ impl Subject {
             .collect();
 
         for greeting in greetings.iter() {
-            if words.contains(greeting) {
-                if REQUIRED_WORDS.iter().any(|word| words.contains(word)) {
-                    return Some(Subject::Greetings);
-                }
+            if words.contains(greeting) && REQUIRED_WORDS.iter().any(|word| words.contains(word)) {
+                return Some(Subject::Greetings);
             }
         }
 
@@ -88,7 +86,6 @@ impl Subject {
         detected
             .into_iter()
             .max_by(|a, b| a.priority().partial_cmp(&b.priority()).unwrap())
-            .map(|s| s)
     }
 }
 
@@ -119,10 +116,7 @@ impl Message {
     }
 
     pub fn has_subject(&self) -> bool {
-        match self.subject {
-            Some(_) => true,
-            None => false,
-        }
+        self.subject.is_some()
     }
 
     pub async fn get_response(&self) -> String {
@@ -142,7 +136,7 @@ impl Message {
                 let response = scryfall::get_card(card.to_string()).await;
 
                 if let Some(response) = response {
-                    return format!("{response}");
+                    return response;
                 }
 
                 return format!("@{0} Não consegui encontrar o card.", self.sender);

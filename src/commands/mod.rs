@@ -1,5 +1,5 @@
 pub mod addcmd;
-pub mod commands;
+pub mod cmd;
 pub mod delcmd;
 pub mod gtasa;
 pub mod node;

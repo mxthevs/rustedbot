@@ -7,12 +7,12 @@ use rand::Rng;
 use std::fs;
 
 #[derive(Default)]
-pub struct GTASA;
+pub struct Gta;
 
 #[async_trait]
-impl Command for GTASA {
+impl Command for Gta {
     fn name(&self) -> &'static str {
-        "gtasa"
+        "gta"
     }
 
     async fn execute(&self, args: &str, _sender: &str) -> String {
@@ -65,4 +65,4 @@ fn choose_line<'a>(lines: &'a [String], target: Option<&str>) -> Option<&'a str>
     }
 }
 
-register_command!(GTASA);
+register_command!(Gta);

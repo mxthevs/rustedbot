@@ -85,7 +85,7 @@ fn calculate_odds(params: OddsParams, args: &str) -> String {
         }
         Err(_) => {
             log::error!("Error creating hypergeometric distribution: {args}");
-            "Error creating hypergeometric distribution.".to_string()
+            String::from("Error creating hypergeometric distribution.")
         }
     }
 }

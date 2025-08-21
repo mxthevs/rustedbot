@@ -51,7 +51,7 @@ fn handle_command(username: &str, sender: &str) -> String {
     sqlite::untrust_user(username);
     log::info!("{sender} untrusted user: {username}");
 
-    String::from(format!("{username} has been untrusted."))
+    format!("{username} has been untrusted.")
 }
 
 register_command!(Untrust);

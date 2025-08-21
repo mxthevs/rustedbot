@@ -20,7 +20,6 @@ impl Config {
 
         let loaded_config = file
             .split('\n')
-            .into_iter()
             .map(|line| line.trim())
             .filter(|line| !line.is_empty())
             .map(|line| {
@@ -34,7 +33,6 @@ impl Config {
             })
             .map(|line| {
                 line.split('=')
-                    .into_iter()
                     .map(|part| part.trim())
                     .collect::<Vec<&str>>()
             })
@@ -64,9 +62,8 @@ impl Config {
                 ["command.trusted", trusted_users] => {
                     let trusted_users: Vec<String> = trusted_users
                         .split(',')
-                        .into_iter()
                         .map(|user| user.trim())
-                        .map(|user| String::from(user))
+                        .map(String::from)
                         .collect();
                     config.trusted_users = trusted_users;
                 }

@@ -32,7 +32,7 @@ pub fn migrate(trusted_users: Vec<String>) {
         .unwrap();
 
     if trusted_users.is_empty() {
-        return ();
+        return;
     }
 
     let values = (1..=trusted_users.len())
@@ -65,7 +65,7 @@ pub fn create_command(name: &str, response: &str) {
     ";
 
     connection
-        .execute(create_command_query, &[&name, &response])
+        .execute(create_command_query, [&name, &response])
         .unwrap();
 }
 
@@ -100,11 +100,11 @@ pub fn get_command_response(name: &str) -> Result<String, rusqlite::Error> {
     ";
 
     let mut statement = connection.prepare(get_command_response_query).unwrap();
-    let responses = statement.query_map(&[&name], |row| Ok(row.get(0).unwrap()));
+    let responses = statement.query_map([&name], |row| Ok(row.get(0).unwrap()));
 
     match responses {
-        Ok(responses) => {
-            for response in responses {
+        Ok(mut responses) => {
+            if let Some(response) = responses.next() {
                 return Ok(response.unwrap());
             }
         }
@@ -124,7 +124,7 @@ pub fn update_command_response(name: &str, response: &str) {
     ";
 
     connection
-        .execute(update_command_response_query, &[&response, &name])
+        .execute(update_command_response_query, [&response, &name])
         .unwrap();
 }
 
@@ -137,7 +137,7 @@ pub fn delete_command(name: &str) {
       WHERE name = ?
     ";
 
-    connection.execute(delete_command_query, &[&name]).unwrap();
+    connection.execute(delete_command_query, [&name]).unwrap();
 }
 
 pub fn is_trusted(username: &str) -> bool {
@@ -162,7 +162,7 @@ pub fn trust_user(username: &str) {
     let connection = Connection::open("./database/rusted.db").unwrap();
 
     if is_trusted(username) {
-        return ();
+        return;
     }
 
     let trust_user_query = "
@@ -171,7 +171,7 @@ pub fn trust_user(username: &str) {
       ON CONFLICT(username) DO NOTHING
     ";
 
-    connection.execute(trust_user_query, &[&username]).unwrap();
+    connection.execute(trust_user_query, [&username]).unwrap();
 }
 
 pub fn untrust_user(username: &str) {
@@ -183,7 +183,5 @@ pub fn untrust_user(username: &str) {
       WHERE username = ?
     ";
 
-    connection
-        .execute(untrust_user_query, &[&username])
-        .unwrap();
+    connection.execute(untrust_user_query, [&username]).unwrap();
 }

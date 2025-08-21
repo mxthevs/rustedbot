@@ -51,7 +51,7 @@ fn handle_command(username: &str, sender: &str) -> String {
     sqlite::trust_user(username);
     log::info!("{sender} trusted user: {username}");
 
-    String::from(format!("{username} has been trusted."))
+    format!("{username} has been trusted.")
 }
 
 register_command!(Trust);

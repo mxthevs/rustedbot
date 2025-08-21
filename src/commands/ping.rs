@@ -13,7 +13,7 @@ impl Command for Ping {
     }
 
     async fn execute(&self, _args: &str, _sender: &str) -> String {
-        "Pong!".to_string()
+        String::from("Pong!")
     }
 }
 
