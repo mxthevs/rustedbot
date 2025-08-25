@@ -55,7 +55,7 @@ impl Subject {
 
         let message = message.to_ascii_lowercase();
         let words: Vec<&str> = message
-            .split(|c: char| !c.is_alphanumeric() && c != '_') // Keeps underscores in names like "caml_bot"
+            .split(|c: char| !c.is_alphanumeric() && c != '_')
             .filter(|w| !w.is_empty())
             .collect();
 
